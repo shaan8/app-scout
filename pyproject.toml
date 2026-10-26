@@ -1,0 +1,15 @@
+[project]
+name = "app-scout"
+version = "0.1.0"
+description = "Founder-built apps trending in US and Asian App Store charts"
+requires-python = ">=3.11"
+dependencies = ["certifi", "openpyxl>=3.1"]
+
+[project.optional-dependencies]
+dev = ["pytest"]
+
+[project.scripts]
+scout = "scout.__main__:main"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

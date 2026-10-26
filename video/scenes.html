@@ -1,0 +1,552 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>app-scout demo</title>
+<style>
+  :root {
+    --bg1: #070b18; --bg2: #101833; --ink: #eef1fb; --dim: #9aa3c0; --faint: #5b6488;
+    --teal: #4fd1c5; --violet: #8b7cf6; --green: #34d399; --amber: #fbbf24; --red: #f87171;
+    --card: rgba(255,255,255,0.045); --line: rgba(255,255,255,0.09);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { width: 1920px; height: 1080px; overflow: hidden; background: var(--bg1); }
+  body { font-family: -apple-system, "SF Pro Display", "Helvetica Neue", "PingFang TC", sans-serif; color: var(--ink);
+         -webkit-font-smoothing: antialiased; }
+  #stage { position: absolute; inset: 0; background: radial-gradient(1200px 800px at 20% 10%, #16224a 0%, transparent 60%),
+           radial-gradient(1000px 700px at 85% 90%, #1d1440 0%, transparent 60%), linear-gradient(160deg, var(--bg1), var(--bg2)); }
+  .glow { position: absolute; width: 900px; height: 900px; border-radius: 50%; filter: blur(120px); opacity: .35; }
+  #g1 { background: var(--teal); left: -300px; top: -350px; }
+  #g2 { background: var(--violet); right: -350px; bottom: -400px; }
+  .grid { position: absolute; inset: 0; background-image: linear-gradient(rgba(255,255,255,.025) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(255,255,255,.025) 1px, transparent 1px); background-size: 64px 64px;
+          mask-image: radial-gradient(ellipse at center, black 30%, transparent 75%); }
+
+  #brand { position: absolute; left: 72px; top: 56px; font-size: 26px; font-weight: 700; letter-spacing: -.3px; display: flex; align-items: center; gap: 14px; }
+  .dot { width: 14px; height: 14px; border-radius: 50%; background: linear-gradient(135deg, var(--teal), var(--violet)); box-shadow: 0 0 24px var(--teal); }
+  #steps { position: absolute; left: 72px; right: 72px; bottom: 54px; display: flex; gap: 14px; }
+  .step { flex: 1; }
+  .step .bar { height: 4px; border-radius: 4px; background: rgba(255,255,255,.08); overflow: hidden; }
+  .step .fill { height: 100%; width: 0; background: linear-gradient(90deg, var(--teal), var(--violet)); }
+  .step .lab { margin-top: 12px; font-size: 17px; color: var(--faint); font-weight: 600; letter-spacing: .4px; text-transform: uppercase; }
+
+  .scene { position: absolute; inset: 0; opacity: 0; padding: 150px 150px 150px; }
+  .kicker { font-size: 22px; font-weight: 700; letter-spacing: 3px; text-transform: uppercase;
+            background: linear-gradient(90deg, var(--teal), var(--violet)); -webkit-background-clip: text; color: transparent; }
+  h1 { font-size: 112px; font-weight: 800; letter-spacing: -4px; line-height: 1.0; }
+  h2 { font-size: 68px; font-weight: 800; letter-spacing: -2px; line-height: 1.08; margin-top: 18px; }
+  .sub { font-size: 32px; color: var(--dim); margin-top: 26px; line-height: 1.4; max-width: 1300px; }
+  .grad { background: linear-gradient(90deg, var(--teal), var(--violet)); -webkit-background-clip: text; color: transparent; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 24px; backdrop-filter: blur(10px);
+          box-shadow: 0 30px 80px rgba(0,0,0,.35); }
+  .chip { display: inline-flex; align-items: center; gap: 10px; padding: 12px 22px; border-radius: 999px; font-size: 26px; font-weight: 650;
+          background: rgba(255,255,255,.06); border: 1px solid var(--line); }
+  .mono { font-family: "SF Mono", ui-monospace, Menlo, monospace; }
+  .row { display: flex; gap: 28px; }
+  .abs { position: absolute; }
+  .num { font-size: 96px; font-weight: 800; letter-spacing: -3px; font-variant-numeric: tabular-nums; }
+  .label { font-size: 24px; color: var(--dim); margin-top: 6px; }
+  .tag { font-size: 18px; font-weight: 700; padding: 6px 14px; border-radius: 999px; letter-spacing: .5px; }
+
+  /* scene 2: chart list */
+  .chart-item { display: flex; align-items: center; gap: 26px; padding: 18px 28px; font-size: 32px; font-weight: 650; border-bottom: 1px solid var(--line); position: relative; }
+  .chart-item .rk { width: 44px; color: var(--faint); font-variant-numeric: tabular-nums; }
+  .chart-item .pub { color: var(--faint); font-size: 22px; font-weight: 500; margin-left: auto; margin-right: 24px; }
+  .strike { position: absolute; left: -6px; height: 3px; top: 52%; background: var(--red); width: 0; border-radius: 3px; }
+
+  /* scene 4: bars */
+  .bar-row { display: grid; grid-template-columns: 330px 1fr 120px; align-items: center; gap: 24px; margin: 22px 0; font-size: 28px; }
+  .hbar { height: 34px; border-radius: 10px; background: rgba(255,255,255,.06); overflow: hidden; }
+  .hfill { height: 100%; width: 0; border-radius: 10px; }
+
+  /* scene 6/7 */
+  .flow-node { padding: 26px 30px; font-size: 28px; font-weight: 650; width: 380px; }
+  .flow-node small { display: block; color: var(--dim); font-weight: 500; font-size: 21px; margin-top: 8px; }
+  .check { display: grid; grid-template-columns: 54px 1fr auto; align-items: center; gap: 18px; padding: 20px 28px; font-size: 28px; border-bottom: 1px solid var(--line); }
+  .tick { width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; font-size: 24px; font-weight: 900; color: #06101c; transform: scale(0); }
+
+  /* scene 9: sheet */
+  table { border-collapse: collapse; width: 100%; font-size: 23px; }
+  th { text-align: left; padding: 16px 18px; background: #1f2a44; color: #fff; font-weight: 700; font-size: 20px; }
+  td { padding: 12px 18px; border-bottom: 1px solid rgba(255,255,255,.07); color: #dfe4f5; white-space: nowrap; }
+  .pill { display: inline-block; padding: 5px 14px; border-radius: 8px; font-size: 19px; font-weight: 700; }
+  .pv { background: rgba(52,211,153,.18); color: var(--green); }
+  .pl { background: rgba(251,191,36,.16); color: var(--amber); }
+  .pn { color: var(--faint); }
+
+  /* windows */
+  .win { background: rgba(10,14,30,.82); border: 1px solid var(--line); border-radius: 18px; overflow: hidden; box-shadow: 0 40px 100px rgba(0,0,0,.5); }
+  .chrome { height: 46px; display: flex; align-items: center; gap: 9px; padding: 0 18px; background: rgba(255,255,255,.05); border-bottom: 1px solid var(--line); }
+  .chrome i { width: 13px; height: 13px; border-radius: 50%; background: #ff5f57; }
+  .chrome i:nth-child(2) { background: #febc2e; } .chrome i:nth-child(3) { background: #28c840; }
+  .chrome span { margin-left: 14px; font-size: 17px; color: var(--faint); font-weight: 600; }
+  .win .body { padding: 28px 34px; font-size: 25px; line-height: 1.75; min-height: 380px; white-space: pre; }
+  .t-p { color: var(--teal); } .t-c { color: var(--faint); } .t-o { color: #b9c0dc; } .t-k { color: var(--green); }
+  .ok { color: var(--green); font-weight: 900; }
+  .code .kw { color: #c792ea; } .code .st { color: #a5e3a0; } .code .nu { color: #f7c66b; } .code .cm { color: var(--faint); }
+  .hl { background: rgba(79,209,197,.12); border-radius: 6px; box-shadow: inset 3px 0 0 var(--teal); }
+  .tab { padding: 10px 20px; font-size: 18px; font-weight: 650; color: var(--faint); border-radius: 10px 10px 0 0; }
+  .tab.on { background: #1f2a44; color: #fff; }
+  /* terminal */
+  .term { padding: 40px 46px; font-size: 30px; line-height: 1.7; width: 1500px; }
+  .term .p { color: var(--teal); }
+  .term .c { color: var(--faint); }
+  .caret { display: inline-block; width: 14px; height: 34px; background: var(--ink); vertical-align: -6px; }
+</style>
+</head>
+<body>
+<div id="stage"><div class="glow" id="g1"></div><div class="glow" id="g2"></div><div class="grid"></div></div>
+<div id="brand"><span class="dot"></span>app-scout</div>
+
+<!-- 1. title -->
+<section class="scene" id="s1" style="display:flex;flex-direction:column;justify-content:center;">
+  <div class="kicker">Pre-seed sourcing pipeline</div>
+  <h1 style="margin-top:28px">Find founder-built apps<br><span class="grad">before they're obvious.</span></h1>
+  <div class="sub">Trending iOS apps across the US and Asia, filtered down to the ones a founder is still running, with contacts that are checked, not guessed.</div>
+</section>
+
+<!-- 2. giants -->
+<section class="scene" id="s2">
+  <div class="kicker">The problem</div>
+  <h2>The charts are full of giants.</h2>
+  <div class="card abs" style="left:150px;top:380px;width:1050px;padding:10px 0;" id="chartlist"></div>
+  <div class="abs" style="left:1290px;top:430px;width:500px;" id="s2note">
+    <div style="font-size:40px;font-weight:800;line-height:1.2">Top 8 overall,<br>all excluded.</div>
+    <div class="sub" style="font-size:28px">Big publishers, $1M+ a month, or a product that's been around for years.</div>
+  </div>
+</section>
+
+<!-- 3. collect -->
+<section class="scene" id="s3">
+  <div class="kicker">Step 1 · Collect</div>
+  <h2>8 markets. 13 consumer categories.</h2>
+  <div class="row abs" style="left:150px;top:390px;flex-wrap:wrap;width:1620px;gap:18px" id="markets"></div>
+  <div class="row abs" style="left:150px;top:520px;gap:18px" id="srcs"></div>
+  <div class="row abs" style="left:150px;top:680px;gap:120px">
+    <div><div class="num" id="n-entries">0</div><div class="label">chart entries (top free, grossing, paid)</div></div>
+    <div><div class="num grad" id="n-apps">0</div><div class="label">unique apps</div></div>
+  </div>
+</section>
+
+<!-- 4. filter -->
+<section class="scene" id="s4">
+  <div class="kicker">Step 2 · Filter out established companies</div>
+  <h2>Pre-seed means small, young and founder-run.</h2>
+  <div class="abs" style="left:150px;top:390px;width:1050px" id="bars"></div>
+  <div class="abs card" style="left:1290px;top:390px;width:480px;padding:36px 40px">
+    <div><div class="num" style="color:var(--green)" id="n-founders">0</div><div class="label">founder-built</div></div>
+    <div style="margin-top:26px"><div class="num" style="font-size:64px" id="n-small">0</div><div class="label">small companies</div></div>
+    <div style="margin-top:26px"><div class="num" style="font-size:64px;color:var(--faint)" id="n-excl">0</div><div class="label">excluded, each with a reason</div></div>
+  </div>
+</section>
+
+<!-- 5. founder signal -->
+<section class="scene" id="s5">
+  <div class="kicker">The founder signal</div>
+  <h2>Apple shows <span class="grad">who</span> sells the app.</h2>
+  <div class="abs card" style="left:150px;top:400px;width:500px;padding:36px" id="fc1">
+    <div class="label">App Store seller</div>
+    <div style="font-size:40px;font-weight:750;margin-top:10px">Jane Doe</div>
+    <div class="tag" style="display:inline-block;margin-top:24px;background:rgba(52,211,153,.16);color:var(--green)">INDIVIDUAL DEVELOPER</div>
+    <div class="label" style="margin-top:22px;font-size:22px">A person's own name: a solo founder.</div>
+  </div>
+  <div class="abs card" style="left:710px;top:400px;width:500px;padding:36px" id="fc2">
+    <div class="label">App Store seller</div>
+    <div style="font-size:40px;font-weight:750;margin-top:10px">Kardomo, Inc.</div>
+    <div class="tag" style="display:inline-block;margin-top:24px;background:rgba(79,209,197,.16);color:var(--teal)">YOUNG COMPANY · 4 APPS · 1.3 YRS</div>
+    <div class="label" style="margin-top:22px;font-size:22px">Peeps. Startups incorporate early.</div>
+  </div>
+  <div class="abs card" style="left:1270px;top:400px;width:500px;padding:36px" id="fc3">
+    <div class="label">App Store seller</div>
+    <div style="font-size:40px;font-weight:750;margin-top:10px">Google LLC</div>
+    <div class="tag" style="display:inline-block;margin-top:24px;background:rgba(248,113,113,.16);color:var(--red)">EXCLUDED</div>
+    <div class="label" style="margin-top:22px;font-size:22px">Large publisher, 15+ apps, $1M+/month.</div>
+  </div>
+</section>
+
+<!-- 6. contacts -->
+<section class="scene" id="s6">
+  <div class="kicker">Step 3 · Find contacts</div>
+  <h2>Only from pages the developer lists.</h2>
+  <div class="abs card flow-node" style="left:150px;top:430px" id="fn1">App Store listing<small>website · privacy policy</small></div>
+  <div class="abs card flow-node" style="left:150px;top:600px" id="fn2">Sensor Tower<small>website · support URL</small></div>
+  <svg class="abs" style="left:540px;top:430px" width="300" height="320" id="arrows">
+    <path id="a1" d="M0 70 C 150 70, 150 160, 290 160" stroke="url(#lg)" stroke-width="4" fill="none" stroke-dasharray="400" stroke-dashoffset="400"/>
+    <path id="a2" d="M0 240 C 150 240, 150 160, 290 160" stroke="url(#lg)" stroke-width="4" fill="none" stroke-dasharray="400" stroke-dashoffset="400"/>
+    <defs><linearGradient id="lg"><stop offset="0" stop-color="#4fd1c5"/><stop offset="1" stop-color="#8b7cf6"/></linearGradient></defs>
+  </svg>
+  <div class="abs card flow-node" style="left:840px;top:515px" id="fn3">playpeeps.app<small>home · support · privacy · about</small></div>
+  <div class="abs" style="left:1290px;top:410px;display:flex;flex-direction:column;gap:22px" id="found">
+    <div class="chip"><span style="color:var(--teal)">✉</span><span class="mono">team@playpeeps.app</span></div>
+    <div class="chip"><span style="font-weight:900">𝕏</span><span class="mono">@PlayPeepsApp</span></div>
+    <div class="chip"><span style="color:#60a5fa;font-weight:900">in</span><span class="mono">company/…</span></div>
+    <div class="chip"><span style="font-weight:900">@</span><span class="mono">threads/@…</span></div>
+  </div>
+  <div class="sub abs" style="left:150px;top:800px;font-size:26px">No guessed addresses. No search engines. No logins.</div>
+</section>
+
+<!-- 7. verify -->
+<section class="scene" id="s7">
+  <div class="kicker">Step 4 · Verify every contact</div>
+  <h2>Checked before it reaches the list.</h2>
+  <div class="abs card" style="left:150px;top:380px;width:1050px;padding:8px 0" id="checks"></div>
+  <div class="abs" style="left:1290px;top:390px;display:flex;flex-direction:column;gap:26px">
+    <div class="card" style="padding:26px 34px"><div class="num" style="font-size:72px;color:var(--green)" id="n-ver">0</div><div class="label">verified</div></div>
+    <div class="card" style="padding:26px 34px"><div class="num" style="font-size:72px;color:var(--amber)" id="n-lik">0</div><div class="label">likely: check before use</div></div>
+    <div class="card" style="padding:26px 34px"><div class="num" style="font-size:72px;color:var(--red)" id="n-rej">0</div><div class="label">rejected</div></div>
+  </div>
+</section>
+
+<!-- 8. timeline -->
+<section class="scene" id="s8">
+  <div class="kicker">Timeline mode</div>
+  <h2>Look back over any number of days.</h2>
+  <div class="abs card" style="left:150px;top:390px;width:820px;padding:40px">
+    <div class="mono" style="font-size:30px;color:var(--dim)">--days <span id="days" style="color:var(--ink);font-weight:800">1</span></div>
+    <div style="margin-top:34px;height:10px;border-radius:10px;background:rgba(255,255,255,.08);position:relative">
+      <div id="slfill" style="position:absolute;left:0;top:0;bottom:0;width:0;border-radius:10px;background:linear-gradient(90deg,var(--teal),var(--violet))"></div>
+      <div id="knob" style="position:absolute;top:-13px;width:36px;height:36px;border-radius:50%;background:#fff;box-shadow:0 0 30px var(--teal);left:-18px"></div>
+    </div>
+    <div class="sub" style="font-size:27px;margin-top:44px">Score = average day + ½ × how much it <span class="grad" style="font-weight:800">rose</span> over the window. Climbers outrank apps that are fading.</div>
+  </div>
+  <svg class="abs" style="left:1040px;top:390px" width="740" height="420" id="lines">
+    <rect x="0" y="0" width="740" height="420" rx="24" fill="rgba(255,255,255,0.045)" stroke="rgba(255,255,255,0.09)"/>
+    <text x="40" y="58" fill="#9aa3c0" font-size="24" font-family="Helvetica Neue, Helvetica, sans-serif">Best chart rank across a 7-day window</text>
+    <polyline id="pl1" fill="none" stroke="#34d399" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+    <polyline id="pl2" fill="none" stroke="#5b6488" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="2 12"/>
+    <text id="t1" x="700" y="98" text-anchor="end" fill="#34d399" font-size="24" font-weight="700" font-family="Helvetica Neue, Helvetica, sans-serif">climbing: scores higher</text>
+    <text id="t2" x="700" y="395" text-anchor="end" fill="#7a83a8" font-size="24" font-weight="700" font-family="Helvetica Neue, Helvetica, sans-serif">fading</text>
+  </svg>
+</section>
+
+<!-- 10. install -->
+<section class="scene" id="s10">
+  <div class="kicker">Run it end to end · 1</div>
+  <h2>Install in a minute.</h2>
+  <div class="abs win" style="left:150px;top:370px;width:1080px" id="w10">
+    <div class="chrome"><i></i><i></i><i></i><span>zsh — ~</span></div>
+    <div class="body mono" id="term10"></div>
+  </div>
+  <div class="abs" style="left:1300px;top:380px;display:flex;flex-direction:column;gap:20px" id="req">
+    <div class="chip"><span class="ok">✓</span>Python 3.11+</div>
+    <div class="chip"><span class="ok">✓</span>uv</div>
+    <div class="chip"><span class="ok">✓</span>No API keys</div>
+    <div class="chip"><span class="ok">✓</span>No accounts</div>
+  </div>
+</section>
+
+<!-- 11. charts -->
+<section class="scene" id="s11">
+  <div class="kicker">Run it end to end · 2</div>
+  <h2>Collect and filter the charts.</h2>
+  <div class="abs win" style="left:150px;top:370px;width:1080px" id="w11">
+    <div class="chrome"><i></i><i></i><i></i><span>zsh — app-scout</span></div>
+    <div class="body mono" id="term11"></div>
+  </div>
+  <div class="abs card" style="left:1300px;top:370px;width:470px;padding:30px 34px" id="mk11">
+    <div class="label" style="margin:0 0 18px">Markets fetched</div>
+    <div id="mkgrid" style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px"></div>
+    <div class="label" style="margin:26px 0 0;font-size:21px">Want a week? Add <span class="mono" style="color:var(--ink)">--days 7</span></div>
+  </div>
+</section>
+
+<!-- 12. contacts run -->
+<section class="scene" id="s12">
+  <div class="kicker">Run it end to end · 3</div>
+  <h2>Find and verify contacts.</h2>
+  <div class="abs win" style="left:150px;top:370px;width:1080px" id="w12">
+    <div class="chrome"><i></i><i></i><i></i><span>zsh — app-scout</span></div>
+    <div class="body mono" id="term12"></div>
+  </div>
+  <div class="abs card" style="left:1300px;top:370px;width:470px;padding:34px" id="pg12">
+    <div class="label" style="margin:0">Apps searched</div>
+    <div class="num" style="font-size:72px;margin-top:6px"><span id="n-done">0</span><span style="color:var(--faint);font-size:40px"> / 400</span></div>
+    <div style="height:12px;border-radius:12px;background:rgba(255,255,255,.08);margin-top:18px;overflow:hidden"><div id="pgfill" style="height:100%;width:0;background:linear-gradient(90deg,var(--teal),var(--violet))"></div></div>
+    <div class="label" style="margin-top:22px;font-size:21px">8 sites in parallel, each one paced politely.</div>
+  </div>
+</section>
+
+<!-- 13. workbook -->
+<section class="scene" id="s9">
+  <div class="kicker">Run it end to end · 4</div>
+  <h2>Open the workbook.</h2>
+  <div class="abs win" style="left:150px;top:330px;width:1620px" id="sheet">
+    <div class="chrome"><i></i><i></i><i></i><span>app-scout-2026-10-24.xlsx</span></div>
+    <div id="tabs" style="display:flex;gap:4px;padding:12px 16px 0;background:rgba(255,255,255,.03)"></div>
+    <table>
+      <thead><tr><th>#</th><th>App</th><th>Account</th><th>Markets</th><th>Score</th><th>Email</th><th>X</th><th>LinkedIn</th><th>Threads</th></tr></thead>
+      <tbody id="rows"></tbody>
+    </table>
+  </div>
+</section>
+
+<!-- 14. tune -->
+<section class="scene" id="s14">
+  <div class="kicker">Make it yours</div>
+  <h2>Your thesis, your thresholds.</h2>
+  <div class="abs win" style="left:150px;top:370px;width:1080px" id="w14">
+    <div class="chrome"><i></i><i></i><i></i><span>scout/config.py</span></div>
+    <div class="body mono code" id="code14"></div>
+  </div>
+  <div class="abs" style="left:1300px;top:400px;width:470px" id="tn14">
+    <div style="font-size:38px;font-weight:800;line-height:1.2">One file.</div>
+    <div class="sub" style="font-size:27px;margin-top:16px">Markets, categories, revenue cap, app age, portfolio size and the big-publisher list all live in <span class="mono" style="color:var(--ink)">config.py</span>.</div>
+  </div>
+</section>
+
+<!-- 15. end card -->
+<section class="scene" id="s15" style="display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center">
+  <div style="display:flex;align-items:center;gap:22px;font-size:64px;font-weight:800;letter-spacing:-2px"><span class="dot" style="width:30px;height:30px"></span>app-scout</div>
+  <h1 style="font-size:96px;margin-top:30px">Source founders,<br><span class="grad">not giants.</span></h1>
+  <div class="chip mono" style="margin-top:56px;font-size:30px;padding:18px 34px" id="url15">github.com/shaan8/app-scout</div>
+  <div class="label" style="margin-top:26px" id="rd15">The README has the full guide.</div>
+</section>
+
+<div id="steps"></div>
+<div id="play" style="display:none;position:absolute;right:190px;top:50%;margin-top:-90px;width:180px;height:180px;border-radius:50%;
+  background:rgba(255,255,255,.1);border:2px solid rgba(255,255,255,.35);backdrop-filter:blur(6px);box-shadow:0 0 80px rgba(79,209,197,.35)">
+  <div style="position:absolute;left:70px;top:52px;width:0;height:0;border-left:58px solid #fff;border-top:38px solid transparent;border-bottom:38px solid transparent"></div>
+</div>
+
+<script>
+const SCENES = [
+  ["s1", 0, 5.5], ["s2", 5.5, 12], ["s3", 12, 19], ["s4", 19, 27], ["s5", 27, 33.5],
+  ["s6", 33.5, 41], ["s7", 41, 49], ["s8", 49, 55.5], ["s10", 55.5, 62.5], ["s11", 62.5, 71.5],
+  ["s12", 71.5, 80], ["s9", 80, 88], ["s14", 88, 95], ["s15", 95, 102],
+];
+const DURATION = 102;
+const STEP_LABELS = [["Collect", 12, 19], ["Filter", 19, 33.5], ["Contacts", 33.5, 41], ["Verify", 41, 49],
+                     ["Timeline", 49, 55.5], ["Run it", 55.5, 80], ["Output", 80, 95]];
+
+const clamp = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x));
+const seg = (t, a, b) => clamp((t - a) / (b - a));
+const easeOut = x => 1 - Math.pow(1 - x, 3);
+const easeInOut = x => x < .5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2;
+const spring = x => x === 0 ? 0 : x === 1 ? 1 : Math.pow(2, -9 * x) * Math.sin((x * 10 - .75) * (2 * Math.PI) / 3) + 1;
+const fmt = n => Math.round(n).toLocaleString("en-US");
+const $ = id => document.getElementById(id);
+function enter(el, t, delay = 0, dur = .7, dy = 30) {
+  const p = easeOut(seg(t, delay, delay + dur));
+  el.style.opacity = p; el.style.transform = `translateY(${(1 - p) * dy}px)`;
+}
+
+// static content
+const GIANTS = [["ChatGPT", "OpenAI"], ["ReelShort", "NewLeaf Publishing"], ["YouTube", "Google"], ["Claude", "Anthropic"],
+                ["Google Gemini", "Google"], ["Instagram", "Meta"], ["NetShort", "Netstory"], ["CapCut", "ByteDance"]];
+$("chartlist").innerHTML = GIANTS.map(([n, p], i) =>
+  `<div class="chart-item" id="ci${i}"><span class="rk">${i + 1}</span><span style="position:relative">${n}<span class="strike" id="cs${i}"></span></span>
+   <span class="pub">${p}</span><span class="tag" id="ct${i}" style="background:rgba(248,113,113,.16);color:var(--red);opacity:0">EXCLUDED</span></div>`).join("");
+$("markets").innerHTML = ["🇺🇸 US", "🇹🇼 TW", "🇯🇵 JP", "🇰🇷 KR", "🇸🇬 SG", "🇭🇰 HK", "🇮🇳 IN", "🇻🇳 VN"]
+  .map((m, i) => `<div class="chip" id="m${i}">${m}</div>`).join("");
+$("srcs").innerHTML = [["Sensor Tower", "var(--teal)"], ["Apple top charts", "var(--violet)"], ["iTunes Lookup", "#60a5fa"]]
+  .map(([s, c], i) => `<div class="chip" id="src${i}" style="font-size:22px;color:var(--dim)"><span style="width:10px;height:10px;border-radius:50%;background:${c}"></span>${s}</div>`).join("");
+const BARS = [["App older than 4 years", 2818, "var(--violet)"], ["$1M+ revenue / month", 385, "var(--teal)"],
+              ["Large publisher", 299, "#60a5fa"], ["Studio portfolio", 286, "var(--amber)"], ["AI chat wrapper", 22, "var(--red)"]];
+$("bars").innerHTML = BARS.map(([l, n, c], i) =>
+  `<div class="bar-row" id="br${i}"><span>${l}</span><div class="hbar"><div class="hfill" id="bf${i}" style="background:${c}"></div></div>
+   <span class="mono" style="color:var(--dim);text-align:right" id="bn${i}">0</span></div>`).join("") +
+  `<div class="label" style="font-size:21px;margin-top:10px">An app can fail several checks.</div>`;
+const CHECKS = [["team@playpeeps.app", "mail server found · developer's own domain", "v"],
+                ["@PlayPeepsApp", "account exists on X · name matches the app", "v"],
+                ["LinkedIn company page", "page exists · name matches", "v"],
+                ["Threads profile", "can't be checked without a login", "l"],
+                ["privacy@amazon.com", "vendor named in a privacy policy", "r"]];
+$("checks").innerHTML = CHECKS.map(([c, why, s], i) =>
+  `<div class="check" id="ck${i}"><div class="tick" id="tk${i}" style="background:${s === "v" ? "var(--green)" : s === "l" ? "var(--amber)" : "var(--red)"}">${s === "v" ? "✓" : s === "l" ? "?" : "✕"}</div>
+   <div><div class="mono" style="font-size:27px">${c}</div><div class="label" style="font-size:21px;margin-top:4px">${why}</div></div>
+   <span class="tag" style="background:${s === "v" ? "rgba(52,211,153,.16)" : s === "l" ? "rgba(251,191,36,.16)" : "rgba(248,113,113,.16)"};color:${s === "v" ? "var(--green)" : s === "l" ? "var(--amber)" : "var(--red)"}">${s === "v" ? "VERIFIED" : s === "l" ? "LIKELY" : "REJECTED"}</span></div>`).join("");
+const pill = s => s === "v" ? `<span class="pill pv">verified</span>` : s === "l" ? `<span class="pill pl">likely</span>` : `<span class="pn">—</span>`;
+const SHEET = [["Tiny Computers", "Company", "US TW JP KR SG HK IN VN", 19.56, "v", "", "", ""],
+               ["YoungPhoto", "Individual", "TW JP KR SG HK IN VN", 14.83, "", "", "", "l"],
+               ["TypeDraw", "Company", "US TW JP KR SG HK IN", 12.45, "v", "", "", ""],
+               ["play_music_theory", "Individual", "US TW JP KR SG HK IN", 9.16, "l", "", "", ""],
+               ["Oldi - Phone Camera", "Individual", "TW JP KR SG HK IN VN", 7.88, "v", "", "l", ""],
+               ["Bump - 好友地圖", "Company", "TW JP KR SG VN", 7.59, "v", "", "", ""],
+               ["Auday", "Individual", "US TW JP SG HK IN", 6.98, "l", "v", "", ""],
+               ["Toastie", "Individual", "US KR SG IN", 5.88, "", "v", "", ""]];
+$("rows").innerHTML = SHEET.map((r, i) =>
+  `<tr id="r${i}"><td style="color:var(--faint)">${i + 1}</td><td style="font-weight:700">${r[0]}</td><td>${r[1]}</td><td class="mono" style="font-size:19px;color:var(--dim)">${r[2]}</td>
+   <td class="mono" style="color:var(--green)">${r[3].toFixed(2)}</td><td>${pill(r[4])}</td><td>${pill(r[5])}</td><td>${pill(r[6])}</td><td>${pill(r[7])}</td></tr>`).join("");
+$("steps").innerHTML = STEP_LABELS.map(([l], i) => `<div class="step"><div class="bar"><div class="fill" id="sf${i}"></div></div><div class="lab" id="sl${i}">${l}</div></div>`).join("");
+// Terminal scripts: [start second, kind, text]. "cmd" lines type out; others appear whole.
+// Output lines are the pipeline's real log output for the 2026-10-24 run.
+const T10 = [[.4, "c", "# install uv, once"], [.9, "cmd", "curl -LsSf https://astral.sh/uv/install.sh | sh"],
+             [2.6, "c", "# get the code"], [3.0, "cmd", "git clone https://github.com/shaan8/app-scout.git"],
+             [4.6, "cmd", "cd app-scout"]];
+const T11 = [[.3, "cmd", "uv run python -m scout --date 2026-10-24 charts"],
+             [2.4, "o", "INFO charts for 2026-10-24 collected"],
+             [5.0, "o", "INFO collected 9397 chart entries over 1 day(s)"],
+             [5.5, "o", "INFO 4338 unique apps"],
+             [6.6, "k", "out/2026-10-24: 822 founder, 269 small_company, 3247 excluded"]];
+const T12 = [[.3, "cmd", "uv run python -m scout --date 2026-10-24 contacts"],
+             [2.0, "o", "INFO finding contacts for 400 apps"],
+             [2.4, "o", "INFO {done}/400 apps done"],
+             [5.6, "k", "out/2026-10-24: 329 verified, 175 likely, 98 rejected"]];
+const TABS = ["Summary", "Founders", "Small companies", "Contacts", "Excluded"];
+$("tabs").innerHTML = TABS.map((n, i) => `<div class="tab ${i === 1 ? "on" : ""}" id="tab${i}">${n}</div>`).join("");
+$("mkgrid").innerHTML = ["US", "TW", "JP", "KR", "SG", "HK", "IN", "VN"].map((m, i) =>
+  `<div id="mk${i}" style="padding:12px 0;text-align:center;border-radius:12px;font-weight:750;font-size:22px;background:rgba(255,255,255,.05);color:var(--faint)">${m}</div>`).join("");
+const CODE = [
+  ['<span class="kw">COUNTRIES</span> = [<span class="st">"US"</span>, <span class="st">"TW"</span>, <span class="st">"JP"</span>, <span class="st">"KR"</span>, <span class="st">"SG"</span>, <span class="st">"HK"</span>, <span class="st">"IN"</span>, <span class="st">"VN"</span>]'],
+  [''],
+  ['<span class="kw">class</span> Thresholds:'],
+  ['    max_monthly_revenue_usd: int = <span class="nu" id="rev">1_000_000</span>', "rev"],
+  ['    max_app_age_years: float = <span class="nu">4.0</span>'],
+  ['    max_portfolio_apps: int = <span class="nu">15</span>'],
+  ['    founder_max_apps: int = <span class="nu">5</span>'],
+  [''],
+  ['<span class="kw">BIG_PUBLISHERS</span> = [<span class="st">"google"</span>, <span class="st">"tencent"</span>, <span class="st">"kakao"</span>, ...]'],
+];
+$("code14").innerHTML = CODE.map(([l, id], i) => `<div id="cl${i}" ${id ? 'class="hlrow"' : ""} style="padding:0 8px">${l || "&nbsp;"}</div>`).join("");
+
+function renderTerm(el, lt, script, vars = {}) {
+  const out = [];
+  for (const [at, kind, text0] of script) {
+    if (lt < at) break;
+    const text = text0.replace(/\{(\w+)\}/g, (_, k) => vars[k]);
+    if (kind === "cmd") {
+      const n = Math.floor((lt - at) * 34);
+      out.push(`<span class="t-p">$ </span>${text.slice(0, n)}`);
+    } else {
+      out.push(`<span class="t-${kind}">${text}</span>`);
+    }
+  }
+  const caret = Math.floor(lt * 2.2) % 2 ? `<span class="caret"></span>` : "";
+  el.innerHTML = out.join("\n") + (out.length ? caret : "");
+}
+
+function render(t) {
+  $("g1").style.transform = `translate(${Math.sin(t / 6) * 80}px, ${Math.cos(t / 7) * 60}px)`;
+  $("g2").style.transform = `translate(${Math.cos(t / 5) * 90}px, ${Math.sin(t / 8) * 70}px)`;
+  for (const [id, a, b] of SCENES) {
+    const el = $(id);
+    const p = Math.min(easeOut(seg(t, a, a + .6)), 1 - easeInOut(seg(t, b - .5, b)));
+    el.style.opacity = t < a || t > b ? 0 : p;
+    el.style.transform = `translateY(${(1 - easeOut(seg(t, a, a + .8))) * 24}px)`;
+  }
+  STEP_LABELS.forEach(([, a, b], i) => {
+    $("sf" + i).style.width = `${seg(t, a, b) * 100}%`;
+    $("sl" + i).style.color = t >= a && t < b ? "#eef1fb" : t >= b ? "#9aa3c0" : "#5b6488";
+  });
+  const showSteps = Math.min(easeOut(seg(t, 11.5, 12.3)), 1 - easeInOut(seg(t, 94.5, 95.2)));
+  $("brand").style.opacity = 1 - easeInOut(seg(t, 94.5, 95.2));
+  $("steps").style.opacity = showSteps;
+
+  // 2: giants get struck out one by one
+  let lt = t - 5.5;
+  GIANTS.forEach((_, i) => {
+    enter($("ci" + i), lt, .2 + i * .12, .5, 16);
+    const s = seg(lt, 1.6 + i * .32, 1.9 + i * .32);
+    $("cs" + i).style.width = `calc(${easeOut(s) * 100}% + ${easeOut(s) * 12}px)`;
+    $("ct" + i).style.opacity = easeOut(s);
+    $("ci" + i).style.color = s > 0 ? `rgba(238,241,251,${1 - .55 * s})` : "";
+  });
+  enter($("s2note"), lt, 4.2);
+
+  // 3: collect
+  lt = t - 12;
+  for (let i = 0; i < 8; i++) { const p = spring(seg(lt, .3 + i * .1, .9 + i * .1)); $("m" + i).style.transform = `scale(${p})`; $("m" + i).style.opacity = clamp(p); }
+  for (let i = 0; i < 3; i++) enter($("src" + i), lt, 1.3 + i * .15, .5, 14);
+  $("n-entries").textContent = fmt(9397 * easeOut(seg(lt, 1.8, 4.2)));
+  $("n-apps").textContent = fmt(4338 * easeOut(seg(lt, 2.6, 4.8)));
+
+  // 4: filter bars
+  lt = t - 19;
+  BARS.forEach(([, n], i) => {
+    enter($("br" + i), lt, .3 + i * .15, .5, 12);
+    const p = easeOut(seg(lt, .9 + i * .25, 2.6 + i * .25));
+    $("bf" + i).style.width = `${(n / 2818) * 100 * p}%`;
+    $("bn" + i).textContent = fmt(n * p);
+  });
+  $("n-founders").textContent = fmt(822 * easeOut(seg(lt, 3, 5.5)));
+  $("n-small").textContent = fmt(269 * easeOut(seg(lt, 3.3, 5.5)));
+  $("n-excl").textContent = fmt(3247 * easeOut(seg(lt, 3.6, 5.8)));
+
+  // 5: founder signal cards
+  lt = t - 27;
+  ["fc1", "fc2", "fc3"].forEach((id, i) => enter($(id), lt, .4 + i * .5, .7, 40));
+  $("fc3").style.opacity = parseFloat($("fc3").style.opacity) * (1 - .45 * easeOut(seg(lt, 3.6, 4.4)));
+
+  // 6: contacts flow
+  lt = t - 33.5;
+  enter($("fn1"), lt, .3); enter($("fn2"), lt, .55);
+  $("a1").style.strokeDashoffset = 400 * (1 - easeInOut(seg(lt, 1.1, 2.1)));
+  $("a2").style.strokeDashoffset = 400 * (1 - easeInOut(seg(lt, 1.3, 2.3)));
+  enter($("fn3"), lt, 2.1);
+  [...$("found").children].forEach((el, i) => { const p = spring(seg(lt, 3 + i * .3, 3.7 + i * .3)); el.style.transform = `translateX(${(1 - clamp(p)) * 60}px) scale(${.9 + .1 * p})`; el.style.opacity = clamp(p * 1.4); });
+
+  // 7: verify
+  lt = t - 41;
+  CHECKS.forEach((_, i) => {
+    enter($("ck" + i), lt, .3 + i * .18, .5, 12);
+    $("tk" + i).style.transform = `scale(${spring(seg(lt, 1.4 + i * .5, 2.1 + i * .5))})`;
+  });
+  $("n-ver").textContent = fmt(329 * easeOut(seg(lt, 3.5, 6)));
+  $("n-lik").textContent = fmt(175 * easeOut(seg(lt, 3.8, 6)));
+  $("n-rej").textContent = fmt(98 * easeOut(seg(lt, 4.1, 6)));
+
+  // 8: timeline slider and rank lines
+  lt = t - 49;
+  // The slider sweeps out to 30 days, then settles on a week.
+  const sweep = easeInOut(seg(lt, .6, 2.4)), settle = easeInOut(seg(lt, 2.8, 3.8));
+  const days = Math.round(1 + sweep * 29 - settle * 23);
+  const sp = (days - 1) / 29;
+  $("days").textContent = days;
+  $("slfill").style.width = `${sp * 100}%`;
+  $("knob").style.left = `calc(${sp * 100}% - 18px)`;
+  const climb = [21, 18, 15, 11, 8, 4, 2], fade = [3, 4, 7, 9, 12, 16, 19];
+  const lp = easeInOut(seg(lt, 1.2, 4.2));
+  const pts = arr => arr.map((r, i) => [60 + i * 100, 100 + (r / 22) * 280]).filter((_, i) => i <= lp * 6 + 1e-6)
+    .map(([x, y]) => `${x},${y}`).join(" ");
+  $("pl1").setAttribute("points", pts(climb)); $("pl2").setAttribute("points", pts(fade));
+  $("t1").style.opacity = $("t2").style.opacity = easeOut(seg(lt, 4, 4.6));
+
+  // 10: install
+  lt = t - 55.5;
+  enter($("w10"), lt, .1, .7, 30);
+  renderTerm($("term10"), lt, T10);
+  [...$("req").children].forEach((el, i) => { const p = spring(seg(lt, 1.2 + i * .35, 1.9 + i * .35)); el.style.opacity = clamp(p * 1.3); el.style.transform = `translateX(${(1 - clamp(p)) * 40}px)`; });
+
+  // 11: charts run, markets light up while it "fetches"
+  lt = t - 62.5;
+  enter($("w11"), lt, .1, .7, 30); enter($("mk11"), lt, .4, .7, 30);
+  renderTerm($("term11"), lt, T11);
+  for (let i = 0; i < 8; i++) {
+    const on = lt > 1.9 + i * .35;
+    $("mk" + i).style.background = on ? "rgba(52,211,153,.16)" : "rgba(255,255,255,.05)";
+    $("mk" + i).style.color = on ? "var(--green)" : "var(--faint)";
+  }
+
+  // 12: contacts run with a live counter
+  lt = t - 71.5;
+  enter($("w12"), lt, .1, .7, 30); enter($("pg12"), lt, .4, .7, 30);
+  const done = Math.round(400 * easeInOut(seg(lt, 2.4, 5.5)) / 25) * 25;
+  renderTerm($("term12"), lt, T12, {done: Math.max(25, done)});
+  $("n-done").textContent = lt < 2.4 ? 0 : done;
+  $("pgfill").style.width = `${(lt < 2.4 ? 0 : done) / 4}%`;
+
+  // 13: workbook, tabs flick from Summary to Founders
+  lt = t - 80;
+  enter($("sheet"), lt, .2, .8, 40);
+  TABS.forEach((_, i) => $("tab" + i).classList.toggle("on", i === (lt < 1.4 ? 0 : 1)));
+  SHEET.forEach((_, i) => enter($("r" + i), lt, 1.5 + i * .16, .45, 10));
+
+  // 14: config, the revenue cap gets edited
+  lt = t - 88;
+  enter($("w14"), lt, .1, .7, 30); enter($("tn14"), lt, .6, .7, 30);
+  CODE.forEach((_, i) => enter($("cl" + i), lt, .5 + i * .08, .4, 8));
+  const editing = lt > 2.6;
+  $("cl3").classList.toggle("hl", editing);
+  const typed = "5_000_000".slice(0, Math.max(0, Math.floor((lt - 3.4) * 9)));
+  $("rev").textContent = lt < 3.0 ? "1_000_000" : lt < 3.4 ? "" : typed;
+
+  // 15: end card
+  lt = t - 95;
+  enter($("url15"), lt, 1.0, .7, 20); enter($("rd15"), lt, 1.5, .7, 20);
+}
+window.DURATION = DURATION;
+window.render = render;
+render(0);
+</script>
+</body>
+</html>

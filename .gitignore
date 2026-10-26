@@ -1,0 +1,12 @@
+.cache/
+out/
+.venv/
+__pycache__/
+*.pyc
+*.log
+.pytest_cache/
+video/still-*.png
+video/frames/
+video/render-tmp.mp4
+video/check-*.png
+.DS_Store
