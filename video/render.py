@@ -4,7 +4,7 @@
     uv run --with playwright python video/render.py --stills 3 20 45 # check a few frames as PNGs
     uv run --with playwright python video/render.py --poster         # README poster image
 
-Needs Google Chrome and ffmpeg.
+Needs Google Chrome and ffmpeg. The encode stays under GitHub's 10 MB limit for inline video.
 """
 
 import argparse
@@ -46,7 +46,7 @@ def main() -> None:
         duration = page.evaluate("DURATION")
         ffmpeg = subprocess.Popen(
             ["ffmpeg", "-y", "-loglevel", "error", "-f", "image2pipe", "-framerate", str(FPS), "-i", "-",
-             "-c:v", "libx264", "-preset", "slow", "-crf", "16", "-pix_fmt", "yuv420p", "-movflags", "+faststart",
+             "-c:v", "libx264", "-preset", "veryslow", "-crf", "22", "-tune", "animation", "-pix_fmt", "yuv420p", "-movflags", "+faststart",
              str(args.out)],
             stdin=subprocess.PIPE,
         )
