@@ -6,9 +6,10 @@ app-scout pulls the iOS top charts for eight markets, drops anything built by an
 keeps the apps a founder is still running. Then it finds each one's contacts (email, X, LinkedIn, Threads) on the
 developer's own pages, and checks every contact before it reaches your list.
 
-[![Watch the demo](video/poster.png)](video/app-scout-demo.mp4)
+![app-scout demo: how it works, then a full run from install to workbook](video/app-scout-demo.webp)
 
-<p align="center"><sub>▶ Click to watch the walkthrough (1:42, 1080p): how it works, then a full run from install to workbook</sub></p>
+<p align="center"><sub>The 1:42 walkthrough plays above: how it works, then a full run from install to workbook.
+<a href="https://github.com/shaan8/app-scout/raw/main/video/app-scout-demo.mp4">Download the 1080p MP4</a>.</sub></p>
 
 ---
 
@@ -360,8 +361,9 @@ tests/           filter, scoring and verification tests with a fake network
 video/           the demo video: scenes.html is rendered frame by frame
 ```
 
-To re-render the demo video (needs Google Chrome and ffmpeg):
+To re-render the demo video and the README preview (needs Google Chrome, ffmpeg and `img2webp` from `brew install webp`):
 
 ```bash
-uv run --with playwright python video/render.py
+uv run --with playwright python video/render.py             # video/app-scout-demo.mp4
+uv run --with playwright python video/render.py --preview   # video/app-scout-demo.webp
 ```
